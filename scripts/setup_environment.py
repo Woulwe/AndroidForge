@@ -312,7 +312,7 @@ def _inject_repositories(root: Path, applied: list[str], is_flutter: bool) -> No
     ]
 
     # If settings.gradle(.kts) owns dependency repositories, Gradle rejects
-    # repositories added by project build.gradle(.kts) when repositoriesMode is
+                r"repositoriesMode\s*\.\s*set\s*\(\s*RepositoriesMode\s*\.\s*(?:PREFER_SETTINGS|FAIL_ON_PROJECT_REPOS)",
     # PREFER_SETTINGS or FAIL_ON_PROJECT_REPOS. Detect this before processing
     # candidates so we only inject into settings-level repositories.
     settings_files = [p for p in candidates if p.name.startswith("settings.gradle")]
