@@ -311,8 +311,30 @@ def _inject_repositories(root: Path, applied: list[str], is_flutter: bool) -> No
         'maven { url \'https://jitpack.io\' }',
     ]
 
+    # If settings.gradle(.kts) owns dependency repositories, Gradle rejects
+    # repositories added by project build.gradle(.kts) when repositoriesMode is
+    # PREFER_SETTINGS or FAIL_ON_PROJECT_REPOS. Detect this before processing
+    # candidates so we only inject into settings-level repositories.
+    settings_files = [p for p in candidates if p.name.startswith("settings.gradle")]
+    settings_owns_repositories = False
+    for settings_file in settings_files:
+        if settings_file.exists():
+            settings_text = settings_file.read_text(encoding="utf-8", errors="replace")
+            if re.search(
+                r"repositoriesMode\\s*\\.\\s*set\\s*\\(\\s*RepositoriesMode\\s*\\.\\s*(?:PREFER_SETTINGS|FAIL_ON_PROJECT_REPOS)",
+                settings_text,
+                re.IGNORECASE,
+            ):
+                settings_owns_repositories = True
+                break
+
     for grad in candidates:
         if not grad.exists():
+            continue
+        if settings_owns_repositories and grad.name.startswith("build.gradle"):
+            applied.append(
+                f"Skipped repository injection into {grad.relative_to(root) if grad.is_relative_to(root) else grad}: settings.gradle owns repositories"
+            )
             continue
         content = grad.read_text(encoding="utf-8", errors="replace")
         # Skip if all repos are already declared anywhere in the file.
